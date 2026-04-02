@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4AT Consulting</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@600;800;900&display=swap');
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #04060F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  #starfield { position: fixed; inset: 0; z-index: 0; }
+
+  .scene {
+    position: relative;
+    z-index: 1;
+    width: 960px;
+    height: 500px;
+  }
+
+  /* ─── NODES ─── */
+  .nodes {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .node {
+    display: flex;
+    align-items: center;
+    width: 220px;
+    height: 52px;
+    border-radius: 100px;
+    position: relative;
+    cursor: default;
+    user-select: none;
+  }
+
+  .node-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: 100px;
+    background: #080E22;
+    border: 1.5px solid transparent;
+  }
+
+  /* Per-colour border + shadow */
+  .node[data-c="em"] .node-bg { border-color: rgba(16,185,129,0.45); box-shadow: 0 0 18px rgba(16,185,129,0.10), inset 0 0 10px rgba(16,185,129,0.04); }
+  .node[data-c="vi"] .node-bg { border-color: rgba(139,92,246,0.45); box-shadow: 0 0 18px rgba(139,92,246,0.10), inset 0 0 10px rgba(139,92,246,0.04); }
+  .node[data-c="cy"] .node-bg { border-color: rgba(6,182,212,0.45);  box-shadow: 0 0 18px rgba(6,182,212,0.10),  inset 0 0 10px rgba(6,182,212,0.04); }
+  .node[data-c="am"] .node-bg { border-color: rgba(245,158,11,0.45); box-shadow: 0 0 18px rgba(245,158,11,0.10), inset 0 0 10px rgba(245,158,11,0.04); }
+
+  /* breathing pulse on border */
+  .node[data-c="em"] { animation: breathEm 3.2s ease-in-out infinite; }
+  .node[data-c="vi"] { animation: breathVi 3.2s ease-in-out infinite 0.6s; }
+  .node[data-c="cy"] { animation: breathCy 3.2s ease-in-out infinite 1.2s; }
+  .node[data-c="am"] { animation: breathAm 3.2s ease-in-out infinite 1.8s; }
+
+  @keyframes breathEm { 0%,100%{filter:drop-shadow(0 0  6px rgba(16,185,129,0.0))} 50%{filter:drop-shadow(0 0 14px rgba(16,185,129,0.5))} }
+  @keyframes breathVi { 0%,100%{filter:drop-shadow(0 0  6px rgba(139,92,246,0.0))} 50%{filter:drop-shadow(0 0 14px rgba(139,92,246,0.5))} }
+  @keyframes breathCy { 0%,100%{filter:drop-shadow(0 0  6px rgba(6,182,212,0.0))}  50%{filter:drop-shadow(0 0 14px rgba(6,182,212,0.5))} }
+  @keyframes breathAm { 0%,100%{filter:drop-shadow(0 0  6px rgba(245,158,11,0.0))} 50%{filter:drop-shadow(0 0 14px rgba(245,158,11,0.5))} }
+
+  /* icon circle */
+  .node-icon {
+    position: relative; z-index:1;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    margin-left: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .node[data-c="em"] .node-icon { background: rgba(16,185,129,0.12); border: 1.5px solid rgba(16,185,129,0.55); }
+  .node[data-c="vi"] .node-icon { background: rgba(139,92,246,0.12); border: 1.5px solid rgba(139,92,246,0.55); }
+  .node[data-c="cy"] .node-icon { background: rgba(6,182,212,0.12);  border: 1.5px solid rgba(6,182,212,0.55); }
+  .node[data-c="am"] .node-icon { background: rgba(245,158,11,0.12); border: 1.5px solid rgba(245,158,11,0.55); }
+
+  .node-label {
+    position: relative; z-index:1;
+    flex: 1; text-align: center;
+    font-size: 12.5px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+  }
+  .node[data-c="em"] .node-label { color: #6EE7B7; }
+  .node[data-c="vi"] .node-label { color: #C4B5FD; }
+  .node[data-c="cy"] .node-label { color: #67E8F9; }
+  .node[data-c="am"] .node-label { color: #FCD34D; }
+
+  /* expanding ring */
+  .node-ring {
+    position: absolute; inset: -3px;
+    border-radius: 100px;
+    opacity: 0;
+    animation: ringOut 3.2s ease-out infinite;
+  }
+  .node[data-c="em"] .node-ring { border:1px solid rgba(16,185,129,0.6);  animation-delay:0s; }
+  .node[data-c="vi"] .node-ring { border:1px solid rgba(139,92,246,0.6); animation-delay:0.6s; }
+  .node[data-c="cy"] .node-ring { border:1px solid rgba(6,182,212,0.6);  animation-delay:1.2s; }
+  .node[data-c="am"] .node-ring { border:1px solid rgba(245,158,11,0.6); animation-delay:1.8s; }
+  @keyframes ringOut {
+    0%   { opacity:.8; inset:-3px; }
+    100% { opacity:0;  inset:-16px; }
+  }
+
+  /* ─── WIRES SVG ─── */
+  .wires {
+    position: absolute; inset: 0;
+    width:100%; height:100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  /* ─── HUB ─── */
+  .hub {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .hub-glow {
+    position: absolute;
+    inset: -40px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(99,102,241,0.12) 0%, transparent 68%);
+    animation: hubGlowPulse 3s ease-in-out infinite;
+    z-index:-1;
+  }
+  @keyframes hubGlowPulse {
+    0%,100%{opacity:.8;transform:scale(1)}
+    50%    {opacity:1; transform:scale(1.12)}
+  }
+
+  /* outer gradient border frame */
+  .hub-frame {
+    padding: 2px;
+    border-radius: 22px;
+    background: conic-gradient(from 0deg, #10B981 0%, #6366F1 33%, #F59E0B 66%, #06B6D4 85%, #10B981 100%);
+    animation: hubSpin 6s linear infinite;
+  }
+  @keyframes hubSpin { to { --angle: 360deg; } }
+
+  /* second inner border for the double-ring look */
+  .hub-mid {
+    padding: 3px;
+    border-radius: 20px;
+    background: #06091A;
+  }
+  .hub-border {
+    padding: 2px;
+    border-radius: 18px;
+    background: rgba(165,180,252,0.15);
+  }
+
+  .hub-inner {
+    width: 192px; height: 112px;
+    border-radius: 16px;
+    background: linear-gradient(160deg, #080E22 0%, #04060F 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+
+  /* vertical ribs */
+  .rib {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    width: 7px; height: 62%;
+    display: flex; flex-direction: column;
+    gap: 3.5px; justify-content: center;
+  }
+  .rib.l { left: -1px; }
+  .rib.r { right: -1px; }
+  .rib span {
+    display: block; width:100%; height:3px;
+    border-radius:1px;
+    background: rgba(165,180,252,0.3);
+  }
+
+  .hub-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px; font-weight: 900;
+    color: #F0F4FF;
+    letter-spacing: 1.5px;
+    text-align: center; line-height: 1.2;
+    text-shadow: 0 0 20px rgba(165,180,252,0.9), 0 0 45px rgba(165,180,252,0.35);
+  }
+  .hub-sub {
+    margin-top: 6px;
+    font-size: 8px; font-weight: 700;
+    letter-spacing: 3.5px; text-transform: uppercase;
+    background: linear-gradient(90deg, #10B981 0%, #818CF8 50%, #F59E0B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ─── PHONE ─── */
+  .phone-wrap {
+    position: absolute;
+    right: 0; top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .phone {
+    width: 148px; height: 300px;
+    border-radius: 28px;
+    background: #070C1C;
+    border: 1.5px solid rgba(148,163,184,0.22);
+    position: relative; overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.025),
+      0 0 45px rgba(99,102,241,0.18),
+      0 0 90px rgba(99,102,241,0.07),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    animation: phonePulse 4s ease-in-out infinite;
+  }
+  @keyframes phonePulse {
+    0%,100%{ box-shadow: 0 0 45px rgba(99,102,241,0.18), 0 0 90px rgba(99,102,241,0.07), inset 0 1px 0 rgba(255,255,255,0.05); }
+    50%    { box-shadow: 0 0 65px rgba(99,102,241,0.35), 0 0 110px rgba(99,102,241,0.14), inset 0 1px 0 rgba(255,255,255,0.05); }
+  }
+
+  .p-notch {
+    width:50px; height:9px;
+    background:#070C1C;
+    border-radius:0 0 8px 8px;
+    margin:0 auto;
+    border:1px solid rgba(148,163,184,0.13);
+    border-top:none;
+  }
+  .p-status {
+    display:flex; justify-content:space-between;
+    padding: 3px 10px;
+    font-size:7px; color:rgba(200,210,235,0.45);
+  }
+  .p-header {
+    margin: 2px 8px 0;
+    padding: 5px 8px;
+    background: rgba(99,102,241,0.09);
+    border-radius: 8px;
+    border: 1px solid rgba(99,102,241,0.2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .p-logo {
+    width:18px; height:18px; border-radius:50%;
+    background: linear-gradient(135deg,#6366F1,#8B5CF6);
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:700; color:#fff;
+    font-family:'Orbitron',sans-serif;
+  }
+  .p-brand {
+    font-size:8px; font-weight:700;
+    color:#A5B4FC; letter-spacing:1.5px;
+    font-family:'Orbitron',sans-serif;
+  }
+
+  .p-msgs {
+    padding: 6px 6px 0;
+    display: flex; flex-direction: column;
+    gap: 7px; overflow: hidden;
+    height: 200px;
+  }
+
+  .bubble {
+    border-radius: 10px 10px 10px 2px;
+    padding: 7px 9px; max-width: 90%;
+    animation: bIn .38s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .bubble.out {
+    align-self: flex-end;
+    border-radius: 10px 10px 2px 10px;
+  }
+  @keyframes bIn {
+    from{opacity:0;transform:translateY(10px) scale(0.93)}
+    to  {opacity:1;transform:translateY(0)    scale(1)}
+  }
+
+  .b-sender {
+    font-size:6.5px; font-weight:700;
+    letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px;
+  }
+  .b-bar {
+    height:4px; border-radius:2px; margin:3px 0;
+    background:rgba(255,255,255,0.08);
+  }
+  .b-bar.s{width:52%} .b-bar.m{width:78%} .b-bar.l{width:100%}
+
+  .bubble.in  { background:rgba(99,102,241,0.11);  border:1px solid rgba(99,102,241,0.24); }
+  .bubble.out { background:rgba(16,185,129,0.09);  border:1px solid rgba(16,185,129,0.2); }
+  .bubble.in  .b-sender { color:#818CF8; }
+  .bubble.out .b-sender { color:#34D399; }
+  .bubble.in  .b-bar { background:rgba(99,102,241,0.32); }
+  .bubble.out .b-bar { background:rgba(16,185,129,0.32); }
+
+  .typing {
+    display:flex; gap:3px; align-items:center;
+    padding:7px 10px;
+    background:rgba(99,102,241,0.1);
+    border:1px solid rgba(99,102,241,0.2);
+    border-radius:10px 10px 10px 2px;
+    max-width:52px;
+    animation:bIn .38s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .typing span {
+    width:4px; height:4px; border-radius:50%;
+    background:#818CF8;
+    animation:typDot 1.1s ease-in-out infinite;
+  }
+  .typing span:nth-child(2){animation-delay:.18s}
+  .typing span:nth-child(3){animation-delay:.36s}
+  @keyframes typDot{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+
+  .p-inputbar {
+    position:absolute; bottom:0; left:0; right:0;
+    padding:5px 8px 8px;
+    display:flex; gap:5px; align-items:center;
+    background:rgba(7,12,28,0.92);
+    border-top:1px solid rgba(148,163,184,0.07);
+  }
+  .p-input {
+    flex:1; height:22px;
+    background:rgba(99,102,241,0.09);
+    border:1px solid rgba(99,102,241,0.18);
+    border-radius:11px;
+  }
+  .p-send {
+    width:22px; height:22px; border-radius:50%;
+    background:linear-gradient(135deg,#6366F1,#8B5CF6);
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; color:#fff;
+  }
+
+  /* floating cards */
+  .fcard {
+    position:absolute;
+    width:124px;
+    background:#070C1C;
+    border-radius:12px;
+    padding:9px 11px;
+  }
+  .fcard.t {
+    top:28px; right:158px;
+    border:1px solid rgba(16,185,129,0.28);
+    box-shadow:0 0 18px rgba(16,185,129,0.09);
+    animation:fFloat 4s ease-in-out infinite;
+  }
+  .fcard.b {
+    bottom:48px; right:158px;
+    border:1px solid rgba(245,158,11,0.28);
+    box-shadow:0 0 18px rgba(245,158,11,0.09);
+    animation:fFloat 4s ease-in-out infinite 2s;
+  }
+  @keyframes fFloat{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .fc-tag {
+    font-size:7px; font-weight:700;
+    letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;
+  }
+  .fcard.t .fc-tag { color:#34D399; }
+  .fcard.b .fc-tag { color:#FCD34D; }
+  .fc-bar { height:4px; border-radius:2px; margin:3px 0; background:rgba(255,255,255,0.07); }
+  .fcard.t .fc-bar.hi { background:linear-gradient(90deg,#10B981,transparent); width:72%; }
+  .fcard.b .fc-bar.hi { background:linear-gradient(90deg,#F59E0B,transparent); width:62%; }
+  .fc-bar.s{width:50%}
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<div class="scene">
+
+  <!-- NODES -->
+  <div class="nodes">
+    <div class="node" data-c="em">
+      <div class="node-bg"></div><div class="node-ring"></div>
+      <div class="node-icon">💰</div>
+      <div class="node-label">Finance</div>
+    </div>
+    <div class="node" data-c="vi">
+      <div class="node-bg"></div><div class="node-ring"></div>
+      <div class="node-icon">⚡</div>
+      <div class="node-label">Technology</div>
+    </div>
+    <div class="node" data-c="cy">
+      <div class="node-bg"></div><div class="node-ring"></div>
+      <div class="node-icon">📈</div>
+      <div class="node-label">Analytics</div>
+    </div>
+    <div class="node" data-c="am">
+      <div class="node-bg"></div><div class="node-ring"></div>
+      <div class="node-icon">🛡️</div>
+      <div class="node-label">Compliance</div>
+    </div>
+  </div>
+
+  <!-- SVG WIRES -->
+  <!--
+    Scene 960×500
+    Node column: x=0..220, node centres y:
+      top of nodes = 250 - (4*52+3*22)/2 = 250-137=113
+      y0=113+26=139, y1=213, y2=287, y3=361
+    Node right edge: x=220
+    Junction left:  x=382, y=250
+    Hub left edge:  x=430  (hub centre=480, half-width=50)
+    Hub right edge: x=530
+    Junction right: x=530
+    Phone left edge x≈720
+    Right output stubs at y=175 and y=325
+  -->
+  <svg class="wires" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="gA" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="3" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="gB" x="-150%" y="-150%" width="400%" height="400%">
+        <feGaussianBlur stdDeviation="6" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+
+      <linearGradient id="lgEm" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#10B981" stop-opacity=".75"/>
+        <stop offset="100%" stop-color="#10B981" stop-opacity=".1"/>
+      </linearGradient>
+      <linearGradient id="lgVi" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#8B5CF6" stop-opacity=".75"/>
+        <stop offset="100%" stop-color="#8B5CF6" stop-opacity=".1"/>
+      </linearGradient>
+      <linearGradient id="lgCy" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#06B6D4" stop-opacity=".75"/>
+        <stop offset="100%" stop-color="#06B6D4" stop-opacity=".1"/>
+      </linearGradient>
+      <linearGradient id="lgAm" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#F59E0B" stop-opacity=".75"/>
+        <stop offset="100%" stop-color="#F59E0B" stop-opacity=".1"/>
+      </linearGradient>
+      <linearGradient id="lgOut" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#A5B4FC" stop-opacity=".12"/>
+        <stop offset="100%" stop-color="#A5B4FC" stop-opacity=".7"/>
+      </linearGradient>
+    </defs>
+
+    <!-- BASE WIRE LINES -->
+    <path id="wEm" d="M220,139 L382,250" stroke="url(#lgEm)" stroke-width="1.8" fill="none" filter="url(#gA)"/>
+    <path id="wVi" d="M220,213 L382,250" stroke="url(#lgVi)" stroke-width="1.8" fill="none" filter="url(#gA)"/>
+    <path id="wCy" d="M220,287 L382,250" stroke="url(#lgCy)" stroke-width="1.8" fill="none" filter="url(#gA)"/>
+    <path id="wAm" d="M220,361 L382,250" stroke="url(#lgAm)" stroke-width="1.8" fill="none" filter="url(#gA)"/>
+
+    <!-- junction → hub -->
+    <line x1="382" y1="250" x2="430" y2="250" stroke="rgba(165,180,252,0.35)" stroke-width="1.8" filter="url(#gA)"/>
+
+    <!-- hub → phone outputs -->
+    <path id="wT" d="M530,250 L680,175 L722,175" stroke="url(#lgOut)" stroke-width="1.8" fill="none" filter="url(#gA)"/>
+    <path id="wB" d="M530,250 L680,325 L722,325" stroke="url(#lgOut)" stroke-width="1.8" fill="none" filter="url(#gA)"/>
+
+    <!-- junction dots -->
+    <circle cx="382" cy="250" r="4.5" fill="rgba(165,180,252,0.6)" filter="url(#gB)"/>
+    <circle cx="530" cy="250" r="4.5" fill="rgba(165,180,252,0.6)" filter="url(#gB)"/>
+
+    <!-- ── PULSES LEFT ── 2 per node, offset by half period -->
+    <!-- Emerald -->
+    <circle r="5" fill="#10B981" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="0s"><mpath href="#wEm"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#10B981" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="0.72s"><mpath href="#wEm"/></animateMotion>
+    </circle>
+    <!-- Violet -->
+    <circle r="5" fill="#8B5CF6" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="0.28s"><mpath href="#wVi"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#8B5CF6" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="1.00s"><mpath href="#wVi"/></animateMotion>
+    </circle>
+    <!-- Cyan -->
+    <circle r="5" fill="#06B6D4" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="0.56s"><mpath href="#wCy"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#06B6D4" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="1.28s"><mpath href="#wCy"/></animateMotion>
+    </circle>
+    <!-- Amber -->
+    <circle r="5" fill="#F59E0B" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="0.84s"><mpath href="#wAm"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#F59E0B" filter="url(#gB)" opacity=".95">
+      <animateMotion dur="1.45s" repeatCount="indefinite" begin="1.57s"><mpath href="#wAm"/></animateMotion>
+    </circle>
+
+    <!-- ── PULSES RIGHT ── -->
+    <circle r="5" fill="#A5B4FC" filter="url(#gB)" opacity=".9">
+      <animateMotion dur="1.25s" repeatCount="indefinite" begin="0s"><mpath href="#wT"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#A5B4FC" filter="url(#gB)" opacity=".9">
+      <animateMotion dur="1.25s" repeatCount="indefinite" begin="0.62s"><mpath href="#wT"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#A5B4FC" filter="url(#gB)" opacity=".9">
+      <animateMotion dur="1.25s" repeatCount="indefinite" begin="0.32s"><mpath href="#wB"/></animateMotion>
+    </circle>
+    <circle r="5" fill="#A5B4FC" filter="url(#gB)" opacity=".9">
+      <animateMotion dur="1.25s" repeatCount="indefinite" begin="0.95s"><mpath href="#wB"/></animateMotion>
+    </circle>
+  </svg>
+
+  <!-- HUB -->
+  <div class="hub">
+    <div class="hub-glow"></div>
+    <div class="hub-frame">
+      <div class="hub-mid">
+        <div class="hub-border">
+          <div class="hub-inner">
+            <div class="rib l"><span/><span/><span/><span/><span/><span/><span/></div>
+            <div class="rib r"><span/><span/><span/><span/><span/><span/><span/></div>
+            <div class="hub-title">4AT<br>Consulting</div>
+            <div class="hub-sub">Finance · Tech · AI</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE + CARDS -->
+  <div class="phone-wrap">
+    <div class="fcard t">
+      <div class="fc-tag">Finance Report</div>
+      <div class="fc-bar hi"></div>
+      <div class="fc-bar"></div>
+      <div class="fc-bar s"></div>
+    </div>
+    <div class="fcard b">
+      <div class="fc-tag">Tech Insights</div>
+      <div class="fc-bar hi"></div>
+      <div class="fc-bar"></div>
+      <div class="fc-bar s"></div>
+    </div>
+
+    <div class="phone">
+      <div class="p-notch"></div>
+      <div class="p-status"><span>9:41</span><span>●●●</span></div>
+      <div class="p-header">
+        <div class="p-logo">4</div>
+        <div class="p-brand">4AT · AI</div>
+      </div>
+      <div class="p-msgs" id="msgArea"></div>
+      <div class="p-inputbar">
+        <div class="p-input"></div>
+        <div class="p-send">▶</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* STARFIELD */
+(function(){
+  const c=document.getElementById('starfield');
+  const g=c.getContext('2d');
+  c.width=window.innerWidth; c.height=window.innerHeight;
+  const S=Array.from({length:220},()=>({
+    x:Math.random()*c.width, y:Math.random()*c.height,
+    r:Math.random()*1.1+0.15,
+    ph:Math.random()*Math.PI*2,
+    sp:0.007+Math.random()*0.012
+  }));
+  (function draw(){
+    g.clearRect(0,0,c.width,c.height);
+    S.forEach(s=>{ s.ph+=s.sp; const a=0.2+0.5*Math.abs(Math.sin(s.ph));
+      g.beginPath(); g.arc(s.x,s.y,s.r,0,Math.PI*2);
+      g.fillStyle=`rgba(200,215,255,${a})`; g.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+})();
+
+/* CHAT BUBBLES */
+const area=document.getElementById('msgArea');
+const templates=[
+  {t:'in', bars:['l','m']},
+  {t:'out',bars:['m']},
+  {t:'in', bars:['l','m','s']},
+  {t:'out',bars:['s','m']},
+  {t:'in', bars:['m','l']},
+  {t:'out',bars:['m','s']},
+];
+let idx=0, MAX=4;
+function addMsg(){
+  const m=templates[idx%templates.length]; idx++;
+  if(m.t==='in'){
+    const td=document.createElement('div');
+    td.className='typing';
+    td.innerHTML='<span></span><span></span><span></span>';
+    area.appendChild(td); area.scrollTop=9999;
+    setTimeout(()=>{ td.remove(); push(m); }, 880);
+  } else push(m);
+}
+function push(m){
+  while(area.children.length>=MAX) area.removeChild(area.firstChild);
+  const d=document.createElement('div');
+  d.className=`bubble ${m.t}`;
+  if(m.t==='in') d.innerHTML='<div class="b-sender">4AT AI</div>';
+  else d.innerHTML='<div class="b-sender">You</div>';
+  m.bars.forEach(b=>{ const l=document.createElement('div'); l.className=`b-bar ${b}`; d.appendChild(l); });
+  area.appendChild(d); area.scrollTop=9999;
+}
+addMsg();
+setTimeout(addMsg,1100);
+setInterval(addMsg, 2700);
+</script>
+</body>
+</html>
