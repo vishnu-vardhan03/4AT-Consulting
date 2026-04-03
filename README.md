@@ -31,6 +31,7 @@ Database: MongoDB / PostgreSQL
 AI Integration: OpenAI APIs / Custom AI Models
 
 📂 Project Structure
+
 4AT-Consulting/
 │
 ├── public/             # Static assets
