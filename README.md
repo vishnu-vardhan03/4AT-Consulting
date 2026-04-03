@@ -29,6 +29,7 @@ Styling: Tailwind CSS / CSS Modules
 Backend (if applicable): Node.js / Express
 Database: MongoDB / PostgreSQL
 AI Integration: OpenAI APIs / Custom AI Models
+
 📂 Project Structure
 4AT-Consulting/
 │
@@ -45,7 +46,7 @@ AI Integration: OpenAI APIs / Custom AI Models
 └── vite.config.js / next.config.js
 ⚙️ Installation & Setup
 1. Clone the Repository
-git clone https://github.com/your-username/4AT-Consulting.git
+git clone https://github.com/vishnu-vardhan03/4AT-Consulting.git
 cd 4AT-Consulting
 2. Install Dependencies
 npm install
